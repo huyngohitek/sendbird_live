@@ -134,7 +134,10 @@ android {
     buildFeatures {
         viewBinding true
     }
-
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8    // Make sure you have JavaVersion 1.8.
+        targetCompatibility JavaVersion.VERSION_1_8    // Make sure you have JavaVersion 1.8.
+    }
     ndkVersion rootProject.ext.ndkVersion
 
     compileSdkVersion rootProject.ext.compileSdkVersion
@@ -257,9 +260,10 @@ dependencies {
 
     //////////////////////////////////// included for .kt file 
     // implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+//    implementation 'com.sendbird.sdk:sendbird-chat:4.12.0'
+//    implementation 'com.sendbird.sdk:sendbird-live:1.1.0'
+    implementation 'com.sendbird.sdk:sendbird-live-uikit:1.0.0-beta.4'
 
-    implementation 'com.sendbird.sdk:sendbird-live-uikit:1.0.0-beta.4' 
-    
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
     //noinspection GradleDynamicVersion

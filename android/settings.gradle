@@ -1,7 +1,12 @@
 rootProject.name = 'sendbird_live'
 apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
 
-
+dependencyResolutionManagement {
+    repositories {
+        maven { url "https://jitpack.io" }
+        maven { url "https://repo.sendbird.com/public/maven" }
+    }
+}
 // dependencyResolutionManagement {
 //     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 //     repositories {
