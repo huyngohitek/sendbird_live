@@ -2,15 +2,21 @@
 // SendbirdLiveStream.tsx
 
 import React, {useEffect, useState} from 'react';
-import {View, Text, StyleSheet, Pressable} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  requireNativeComponent,
+} from 'react-native';
 import {NativeModules} from 'react-native';
 
 const {SendbirdLiveModule} = NativeModules;
-
+// const LiveHostView = requireNativeComponent('LiveHostView');
 const user_id = '2U6BgR5PKxsyPHmiIwDvOxS2eso';
 const appId = '5E720D37-FB7D-41F3-924A-6246070BD1F8';
 const SendbirdLiveStream: React.FC = () => {
-  const [liveEventId, setLiveEventId] = useState<string>();
+  const [liveEventId, setLiveEventId] = useState<string>('');
   useEffect(() => {
     console.log('!!!===== useEffect triggered  ');
     const get_access_token = async () => {
@@ -42,17 +48,16 @@ const SendbirdLiveStream: React.FC = () => {
       const onInitError = error => {
         console.error('!!!==========  SDK init failed   ', error);
       };
-      SendbirdLiveModule.initializeSDK(
-        '5E720D37-FB7D-41F3-924A-6246070BD1F8',
-        user_id,
-        sendBirdResponseJson.token,
-        onInitSuccess,
-        onInitError,
-      );
+      // SendbirdLiveModule.initializeSDK(
+      //   '5E720D37-FB7D-41F3-924A-6246070BD1F8',
+      //   user_id,
+      //   sendBirdResponseJson.token,
+      //   onInitSuccess,
+      //   onInitError,
+      // );
       console.log('!!!=========== before .authenticate  ');
       const onAuthenticateSuccess = message => {
         console.log('!!!======= authentication success   ', message);
-        startLiveEvent();
       };
       const onAuthenticateError = error => {
         console.error('!!!========= authentication failed  ', error);
@@ -84,8 +89,10 @@ const SendbirdLiveStream: React.FC = () => {
   };
 
   const endLiveEvent = () => {
+    console.log('=========on end press========');
     const onEndLiveEventSuccess = message => {
       console.log('!!!================  live event ended    ', message); // "successfully ended live event"
+      setLiveEventId('');
     };
     const onEndLiveEventError = error => {
       console.error('!!!===============  live event ending failed    ', error);
@@ -105,12 +112,27 @@ const SendbirdLiveStream: React.FC = () => {
         onPress={endLiveEvent}>
         <Text>X</Text>
       </Pressable>
+      <Pressable hitSlop={20} style={styles.btnStart} onPress={startLiveEvent}>
+        <Text style={styles.txtBtnStart}>Start Live Event</Text>
+      </Pressable>
+      {/* {liveEventId && <LiveHostView style={styles.liveHostView} />} */}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  liveHostView: {...StyleSheet.absoluteFillObject},
   content: {flex: 1},
+  btnStart: {
+    minWidth: 80,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'green',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  txtBtnStart: {color: 'white'},
   btnContainer: {
     position: 'absolute',
     width: 60,
@@ -119,6 +141,8 @@ const styles = StyleSheet.create({
     start: 20,
     backgroundColor: 'red',
     padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   container: {
     flex: 1,
