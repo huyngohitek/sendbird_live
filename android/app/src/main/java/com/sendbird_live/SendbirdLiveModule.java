@@ -3,27 +3,20 @@
 
 package com.sendbird_live;
 
-import android.content.Context;
 import android.content.Intent;
-import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CameraManager;
-import android.os.Build;
+import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.fragment.app.FragmentActivity;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
-import com.sendbird.android.handler.InitResultHandler;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeMap;
 import com.sendbird.live.AuthenticateParams;
 import com.sendbird.live.Host;
 import com.sendbird.live.InitParams;
@@ -31,17 +24,16 @@ import com.sendbird.live.LiveEvent;
 import com.sendbird.live.LiveEventCreateParams;
 import com.sendbird.live.MediaOptions;
 import com.sendbird.live.SendbirdLive;
-import com.sendbird.live.VideoQualityConstraints;
-import com.sendbird.webrtc.AudioDevice;
 import com.sendbird.webrtc.SendbirdException;
-import com.sendbird.webrtc.SendbirdVideoView;
-import com.sendbird.webrtc.VideoDevice;
 import com.sendbird.webrtc.handler.CompletionHandler;
-import com.sendbird_live.view.LiveHostViewFragment;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 
 public class SendbirdLiveModule extends ReactContextBaseJavaModule {
@@ -50,6 +42,8 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
     private static String TAG = "SendbirdLiveModule";
     public String cameraId;
     private LiveEvent liveEventRef;
+
+
 
     SendbirdLiveModule(ReactApplicationContext context) {
         super(context);
@@ -156,9 +150,9 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void startLiveEvent(ReadableArray userIdsForHostArray, String title, String imageUrl,
-                               Callback successCallback,
-                               Callback errorCallback) {
+    public void createLiveEvent(ReadableArray userIdsForHostArray, String title, String imageUrl,
+                                Callback successCallback,
+                                Callback errorCallback) {
 
         List<String> userIdsList = new ArrayList<>();
         for (int i = 0; i < userIdsForHostArray.size(); i++) {
@@ -178,27 +172,25 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
             // If there isn't such a method, you'd need to adjust this line accordingly.
             /* liveEvent.getId() or appropriate method */
             assert liveEvent != null;
-            CameraManager cameraManager = (CameraManager) reactContext.getSystemService(Context.CAMERA_SERVICE);
-            try {
-                cameraId = cameraManager.getCameraIdList()[1];
-                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
-                VideoDevice videoDevice = VideoDevice.Companion.createVideoDevice(Build.MODEL, VideoDevice.Position.FRONT, null);
-                MediaOptions mediaOptions = new MediaOptions(null, null, true, true, null);
-                liveEvent.enterAsHost(mediaOptions, e1 -> {
-                    if (e1 != null) {
-                        Log.d(TAG, e1.getMessage());
-                        return;
-                    }
-                    successCallback.invoke(liveEvent.getLiveEventId());
-                    Intent intent = new Intent(reactContext, LiveActivity.class);
-                    intent.putExtra("LiveEventId", liveEvent.getLiveEventId());
-                    getCurrentActivity().startActivity(intent);
+            MediaOptions mediaOptions = new MediaOptions(null, null, true, true, null);
+            liveEvent.enterAsHost(mediaOptions, e1 -> {
+                if (e1 != null) {
+                    Log.d(TAG, e1.getMessage());
+                    return;
+                }
+                successCallback.invoke(liveEvent.getLiveEventId());
+                goToLiveScreen(liveEvent.getLiveEventId(),true);
 
-                });
-            } catch (CameraAccessException ex) {
-                throw new RuntimeException(ex);
-            }
+            });
         });
+    }
+
+    @ReactMethod
+    public void goToLiveScreen(String liveEventId, boolean isHost) {
+        Intent intent = new Intent(reactContext, LiveActivity.class);
+        intent.putExtra("LiveEventId", liveEventId);
+        intent.putExtra("isHost", isHost);
+        getCurrentActivity().startActivity(intent);
     }
 
     @ReactMethod
@@ -222,6 +214,31 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
         });
     }
 
-    // Here you can add more methods to cover other functionalities like
-    // `enterAsHost` and others.
+    @ReactMethod
+    public void enterLiveEvent(String liveEventId, boolean isHost) {
+        SendbirdLive.getLiveEvent(liveEventId, (liveEvent, e) -> {
+            Log.d(TAG, "enter live event ");
+            if (isHost) {
+                MediaOptions mediaOptions = new MediaOptions(null, null, true, true, null);
+                liveEvent.enterAsHost(mediaOptions, e1 -> {
+                    if (e1 != null) {
+                        Log.d(TAG, e1.getMessage());
+                        return;
+                    }
+                    goToLiveScreen(liveEventId, true);
+
+                });
+            }else {
+                liveEvent.enter(e2 -> {
+                    if (e2 != null) {
+                        Log.d(TAG, e2.getMessage());
+                        return;
+                    }
+                    goToLiveScreen(liveEventId, false);
+                });
+            }
+        });
+        // Here you can add more methods to cover other functionalities like
+        // `enterAsHost` and others.
+    }
 }
