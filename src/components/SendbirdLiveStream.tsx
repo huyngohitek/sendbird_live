@@ -23,7 +23,7 @@ const headers = {
   'Content-Type': 'application/json',
   'Api-Token': API_TOKEN,
 };
-const apiGetLiveEvents = `https://api-${APP_ID}.calls.sendbird.com/v1/live-events?limit=10&state=ready`;
+const apiGetLiveEvents = `https://api-${APP_ID}.calls.sendbird.com/v1/live-events?limit=100&state[]=ready&state[]=ongoing&state[]=created`;
 const SendbirdLiveStream: React.FC = ({userId}) => {
   const apiGetToken = `https://api-${APP_ID}.sendbird.com/v3/users/${userId}/token`;
   const [liveEventId, setLiveEventId] = useState<string>('');

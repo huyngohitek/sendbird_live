@@ -3,7 +3,12 @@
 
 package com.sendbird_live;
 
+import android.content.Context;
 import android.content.Intent;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -19,12 +24,15 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
 import com.sendbird.live.AuthenticateParams;
 import com.sendbird.live.Host;
+import com.sendbird.live.HostType;
 import com.sendbird.live.InitParams;
 import com.sendbird.live.LiveEvent;
 import com.sendbird.live.LiveEventCreateParams;
 import com.sendbird.live.MediaOptions;
 import com.sendbird.live.SendbirdLive;
+import com.sendbird.webrtc.AudioDevice;
 import com.sendbird.webrtc.SendbirdException;
+import com.sendbird.webrtc.VideoDevice;
 import com.sendbird.webrtc.handler.CompletionHandler;
 
 import org.json.JSONException;
@@ -42,7 +50,6 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
     private static String TAG = "SendbirdLiveModule";
     public String cameraId;
     private LiveEvent liveEventRef;
-
 
 
     SendbirdLiveModule(ReactApplicationContext context) {
@@ -161,6 +168,7 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
         LiveEventCreateParams params = new LiveEventCreateParams(userIdsList);
         params.setTitle(title);
         params.setCoverUrl(imageUrl);
+//        params.setHostType(HostType.SINGLE_HOST);
 
 
         SendbirdLive.createLiveEvent(params, (liveEvent, e) -> {
@@ -179,7 +187,7 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
                     return;
                 }
                 successCallback.invoke(liveEvent.getLiveEventId());
-                goToLiveScreen(liveEvent.getLiveEventId(),true);
+                goToLiveScreen(liveEvent.getLiveEventId(), true);
 
             });
         });
@@ -219,16 +227,25 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
         SendbirdLive.getLiveEvent(liveEventId, (liveEvent, e) -> {
             Log.d(TAG, "enter live event ");
             if (isHost) {
-                MediaOptions mediaOptions = new MediaOptions(null, null, true, true, null);
-                liveEvent.enterAsHost(mediaOptions, e1 -> {
-                    if (e1 != null) {
-                        Log.d(TAG, e1.getMessage());
-                        return;
-                    }
-                    goToLiveScreen(liveEventId, true);
+                CameraManager cameraManager = (CameraManager) reactContext.getSystemService(Context.CAMERA_SERVICE);
+                try {
+                    cameraId = cameraManager.getCameraIdList()[1];
+                    CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
 
-                });
-            }else {
+                    VideoDevice videoDevice = VideoDevice.Companion.createVideoDevice(Build.MODEL, VideoDevice.Position.FRONT, cameraCharacteristics);
+                    MediaOptions mediaOptions = new MediaOptions(videoDevice, AudioDevice.SPEAKERPHONE, true, true, null);
+                    liveEvent.enterAsHost(mediaOptions, e1 -> {
+                        if (e1 != null) {
+                            Log.d(TAG, e1.getMessage());
+                            return;
+                        }
+                        goToLiveScreen(liveEventId, true);
+
+                    });
+                } catch (CameraAccessException ex) {
+                    throw new RuntimeException(ex);
+                }
+            } else {
                 liveEvent.enter(e2 -> {
                     if (e2 != null) {
                         Log.d(TAG, e2.getMessage());

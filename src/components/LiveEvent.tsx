@@ -18,9 +18,10 @@ const LiveEvent = (props: ILiveEvent) => {
       title,
       duration,
       live_event_id: liveEventId,
+      state,
     },
   } = props;
-  console.log('----Live Event ====', props.item);
+  // console.log('----Live Event ====', props.item);
   return (
     <Pressable
       onPress={() => onLiveEventPress?.(liveEventId, isHost)}
@@ -37,12 +38,23 @@ const LiveEvent = (props: ILiveEvent) => {
         <View>
           <Text>{title}</Text>
         </View>
-        <Text>{isHostStreaming ? 'Live' : 'Upcoming'}</Text>
         <Text>{participantCount} people joined</Text>
         <Text>
-          {user_ids_for_host[0] !== 'none' ? 'Have host' : 'None host'}
+          {user_ids_for_host[0] !== 'none' || user_ids_for_host[0] !== '0'
+            ? 'Have host'
+            : 'No host(error room)'}
         </Text>
-        <Text>{isHost ? 'Is host' : 'not host'}</Text>
+        <Text>{isHost ? 'Join as Host' : 'Join as participant'}</Text>
+        <Text>
+          Status:{' '}
+          {state === 'created'
+            ? 'Created'
+            : state === 'ready'
+            ? 'Ready'
+            : state === 'ongoing'
+            ? 'Ongoing'
+            : 'Ended'}
+        </Text>
       </View>
     </Pressable>
   );
@@ -52,6 +64,6 @@ export default memo(LiveEvent);
 
 const styles = StyleSheet.create({
   content: {marginStart: 5},
-  coverPhoto: {height: 100, aspectRatio: 16 / 9},
-  container: {alignItems: 'center', flexDirection: 'row', height: 100},
+  coverPhoto: {height: '100%', aspectRatio: 16 / 9},
+  container: {alignItems: 'center', flexDirection: 'row', height: 120},
 });
