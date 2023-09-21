@@ -45,7 +45,11 @@ const LiveEvent = (props: ILiveEvent) => {
             : 'No host(error room)'}
         </Text>
         <Text>{isHost ? 'Join as Host' : 'Join as participant'}</Text>
-        <Text>
+        <Text
+          style={[
+            styles.txtState,
+            {color: state === 'ongoing' ? 'red' : 'black'},
+          ]}>
           Status:{' '}
           {state === 'created'
             ? 'Created'
@@ -63,7 +67,8 @@ const LiveEvent = (props: ILiveEvent) => {
 export default memo(LiveEvent);
 
 const styles = StyleSheet.create({
+  txtState: {fontWeight: 'bold'},
   content: {marginStart: 5},
   coverPhoto: {height: '100%', aspectRatio: 16 / 9},
-  container: {alignItems: 'center', flexDirection: 'row', height: 120},
+  container: {alignItems: 'center', flexDirection: 'row', height: 100},
 });

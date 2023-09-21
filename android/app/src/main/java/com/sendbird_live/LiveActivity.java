@@ -17,9 +17,14 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.FragmentActivity;
 
+import com.facebook.react.ReactActivity;
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.sendbird.live.Host;
 import com.sendbird.live.LiveEvent;
 import com.sendbird.live.LiveEventListener;
+import com.sendbird.live.LiveEventState;
 import com.sendbird.live.MediaOptions;
 import com.sendbird.live.ParticipantCountInfo;
 import com.sendbird.live.SendbirdLive;
@@ -34,12 +39,10 @@ import org.webrtc.RendererCommon;
 import java.util.List;
 import java.util.Map;
 
-public class LiveActivity extends FragmentActivity {
+public class LiveActivity extends ReactActivity {
     String TAG = this.getClass().getSimpleName();
     String cameraId = null;
-    LiveEventListener liveEventListener;
     LiveEvent liveEventRef;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,125 +52,124 @@ public class LiveActivity extends FragmentActivity {
         String liveEventId = getIntent().getStringExtra("LiveEventId");
         boolean isHost = getIntent().getBooleanExtra("isHost", false);
         assert liveEventId != null;
-        if (!isHost) {
-            findViewById(R.id.btnStartLive).setVisibility(View.INVISIBLE);
-        }
         SendbirdLive.getLiveEvent(liveEventId, (liveEvent, e) -> {
-            liveEventRef = liveEvent;
-            if (!isHost) {
-                liveEvent.addListener("liveEventListener", new LiveEventListener() {
-
-                    @Override
-                    public void onCustomItemsDelete(@NonNull LiveEvent liveEvent, @NonNull Map<String, String> map, @NonNull List<String> list) {
-
-                    }
-
-                    @Override
-                    public void onCustomItemsUpdate(@NonNull LiveEvent liveEvent, @NonNull Map<String, String> map, @NonNull List<String> list) {
-
-                    }
-
-                    @Override
-                    public void onDisconnected(@NonNull LiveEvent liveEvent, @NonNull SendbirdException e) {
-
-                    }
-
-                    @Override
-                    public void onHostConnected(@NonNull LiveEvent liveEvent, @NonNull Host host) {
-                        Toast.makeText(LiveActivity.this, "Host connected", Toast.LENGTH_LONG).show();
-                        SendbirdVideoView hostView = findViewById(R.id.sendbirdVideoLiveView);
-                        hostView.setMirror(false);
-                        hostView.setEnableHardwareScaler(true);
-                        hostView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
-                        liveEvent.setVideoViewForLiveEvent(hostView, liveEvent.getHost().getHostId());
-
-                    }
-
-                    @Override
-                    public void onHostDisconnected(@NonNull LiveEvent liveEvent, @NonNull Host host) {
-
-                    }
-
-                    @Override
-                    public void onHostEntered(@NonNull LiveEvent liveEvent, @NonNull Host host) {
-                        Toast.makeText(LiveActivity.this, "Host entered", Toast.LENGTH_LONG).show();
-                        SendbirdVideoView hostView = findViewById(R.id.sendbirdVideoLiveView);
-                        hostView.setMirror(false);
-                        hostView.setEnableHardwareScaler(true);
-                        hostView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
-                        liveEvent.setVideoViewForLiveEvent(hostView, liveEvent.getHost().getHostId());
-                    }
-
-                    @Override
-                    public void onHostExited(@NonNull LiveEvent liveEvent, @NonNull Host host) {
-                        Toast.makeText(LiveActivity.this, "Host Exited", Toast.LENGTH_LONG).show();
-                    }
-
-                    @Override
-                    public void onHostMuteAudio(@NonNull LiveEvent liveEvent, @NonNull Host host) {
-
-                    }
-
-                    @Override
-                    public void onHostStartVideo(@NonNull LiveEvent liveEvent, @NonNull Host host) {
-
-                        Toast.makeText(LiveActivity.this, "Host started video", Toast.LENGTH_LONG).show();
-                        SendbirdVideoView hostView = findViewById(R.id.sendbirdVideoLiveView);
-                        hostView.setMirror(false);
-                        hostView.setEnableHardwareScaler(true);
-                        hostView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
-                        liveEvent.setVideoViewForLiveEvent(hostView, liveEvent.getHost().getHostId());
-                    }
-
-                    @Override
-                    public void onHostStopVideo(@NonNull LiveEvent liveEvent, @NonNull Host host) {
-
-                    }
-
-                    @Override
-                    public void onHostUnmuteAudio(@NonNull LiveEvent liveEvent, @NonNull Host host) {
-
-                    }
-
-                    @Override
-                    public void onLiveEventEnded(@NonNull LiveEvent liveEvent) {
-                        new AlertDialog.Builder(LiveActivity.this).setTitle("Live has ended").setMessage("Live has ended").setCancelable(true).setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-
-                            }
-                        }).setNegativeButton("Cancel", null).show();
-
-                    }
-
-                    @Override
-                    public void onLiveEventInfoUpdated(@NonNull LiveEvent liveEvent) {
-
-                    }
-
-                    @Override
-                    public void onLiveEventReady(@NonNull LiveEvent liveEvent) {
-                        Toast.makeText(LiveActivity.this, "Live Event Ready", Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onLiveEventStarted(@NonNull LiveEvent liveEvent) {
-                        Toast.makeText(LiveActivity.this, "Live Event Started", Toast.LENGTH_SHORT).show();
-
-                    }
-
-                    @Override
-                    public void onParticipantCountChanged(@NonNull LiveEvent liveEvent, @NonNull ParticipantCountInfo participantCountInfo) {
-                        TextView txtParticipants = findViewById(R.id.idTxtParticipants);
-                        txtParticipants.setText(participantCountInfo.getParticipantCount() + " Participants");
-                    }
-
-                    @Override
-                    public void onReactionCountUpdated(@NonNull LiveEvent liveEvent, @NonNull String s, int i) {
-
-                    }
-                });
+            if (!isHost || liveEvent.getState().getValue() == LiveEventState.ONGOING.getValue()) {
+                findViewById(R.id.btnStartLive).setVisibility(View.INVISIBLE);
             }
+            liveEventRef = liveEvent;
+
+            liveEvent.addListener("liveEventListener", new LiveEventListener() {
+
+                @Override
+                public void onCustomItemsDelete(@NonNull LiveEvent liveEvent, @NonNull Map<String, String> map, @NonNull List<String> list) {
+
+                }
+
+                @Override
+                public void onCustomItemsUpdate(@NonNull LiveEvent liveEvent, @NonNull Map<String, String> map, @NonNull List<String> list) {
+
+                }
+
+                @Override
+                public void onDisconnected(@NonNull LiveEvent liveEvent, @NonNull SendbirdException e) {
+                    Toast.makeText(LiveActivity.this, "You are disconnected", Toast.LENGTH_LONG).show();
+                }
+
+                @Override
+                public void onHostConnected(@NonNull LiveEvent liveEvent, @NonNull Host host) {
+                    Toast.makeText(LiveActivity.this, "Host is connected", Toast.LENGTH_LONG).show();
+
+                }
+
+                @Override
+                public void onHostDisconnected(@NonNull LiveEvent liveEvent, @NonNull Host host) {
+                    Toast.makeText(LiveActivity.this, "Host is disconnected", Toast.LENGTH_LONG).show();
+
+                }
+
+                @Override
+                public void onHostEntered(@NonNull LiveEvent liveEvent, @NonNull Host host) {
+                    Toast.makeText(LiveActivity.this, "Host entered", Toast.LENGTH_LONG).show();
+                    SendbirdVideoView hostView = findViewById(R.id.sendbirdVideoLiveView);
+                    hostView.setMirror(false);
+                    hostView.setEnableHardwareScaler(true);
+                    hostView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
+                    liveEvent.setVideoViewForLiveEvent(hostView, liveEvent.getHost().getHostId());
+                }
+
+                @Override
+                public void onHostExited(@NonNull LiveEvent liveEvent, @NonNull Host host) {
+                    Toast.makeText(LiveActivity.this, "Host Exited", Toast.LENGTH_LONG).show();
+                }
+
+                @Override
+                public void onHostMuteAudio(@NonNull LiveEvent liveEvent, @NonNull Host host) {
+
+                }
+
+                @Override
+                public void onHostStartVideo(@NonNull LiveEvent liveEvent, @NonNull Host host) {
+
+                    Toast.makeText(LiveActivity.this, "Host started video", Toast.LENGTH_LONG).show();
+                    SendbirdVideoView hostView = findViewById(R.id.sendbirdVideoLiveView);
+                    hostView.setMirror(false);
+                    hostView.setEnableHardwareScaler(true);
+                    hostView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
+                    liveEvent.setVideoViewForLiveEvent(hostView, liveEvent.getHost().getHostId());
+                }
+
+                @Override
+                public void onHostStopVideo(@NonNull LiveEvent liveEvent, @NonNull Host host) {
+                    Toast.makeText(LiveActivity.this, "Host stopped video", Toast.LENGTH_LONG).show();
+
+                }
+
+                @Override
+                public void onHostUnmuteAudio(@NonNull LiveEvent liveEvent, @NonNull Host host) {
+                    Toast.makeText(LiveActivity.this, "Host unmute Audio", Toast.LENGTH_LONG).show();
+
+                }
+
+                @Override
+                public void onLiveEventEnded(@NonNull LiveEvent liveEvent) {
+                    updateEventState(liveEventId, LiveEventState.ENDED.getValue());
+                    new AlertDialog.Builder(LiveActivity.this).setTitle("Live has ended").setMessage("Live has ended").setCancelable(true).setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+
+                        }
+                    }).setNegativeButton("Cancel", null).show();
+
+                }
+
+                @Override
+                public void onLiveEventInfoUpdated(@NonNull LiveEvent liveEvent) {
+                }
+
+                @Override
+                public void onLiveEventReady(@NonNull LiveEvent liveEvent) {
+                    Toast.makeText(LiveActivity.this, "Live Event Ready", Toast.LENGTH_LONG).show();
+                    updateEventState(liveEventId, LiveEventState.READY.getValue());
+                }
+
+                @Override
+                public void onLiveEventStarted(@NonNull LiveEvent liveEvent) {
+                    Toast.makeText(LiveActivity.this, "Live Event Started", Toast.LENGTH_LONG).show();
+                    updateEventState(liveEventId, LiveEventState.ONGOING.getValue());
+                }
+
+                @Override
+                public void onParticipantCountChanged(@NonNull LiveEvent liveEvent, @NonNull ParticipantCountInfo participantCountInfo) {
+                    TextView txtParticipants = findViewById(R.id.idTxtParticipants);
+                    txtParticipants.setText(participantCountInfo.getParticipantCount() + " Participants");
+                    updateEventParticipantsCount(liveEventId, participantCountInfo.getParticipantCount());
+                }
+
+                @Override
+                public void onReactionCountUpdated(@NonNull LiveEvent liveEvent, @NonNull String s, int i) {
+
+                }
+            });
             TextView txtParticipants = findViewById(R.id.idTxtParticipants);
             txtParticipants.setText(liveEvent.getParticipantCount() + " Participants");
             if (e != null) {
@@ -262,10 +264,25 @@ public class LiveActivity extends FragmentActivity {
         });
     }
 
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
         liveEventRef.removeListener("liveEventListener");
+    }
+
+    void updateEventParticipantsCount(String liveEventId, int liveEventParticipantCount) {
+        WritableMap map = Arguments.createMap();
+        map.putString("id", liveEventId);
+        map.putInt("participantCount", liveEventParticipantCount);
+        getReactInstanceManager().getCurrentReactContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("updateLiveParticipantCount", map);
+
+    }
+
+    void updateEventState(String liveEventId, String liveEventState) {
+        WritableMap map = Arguments.createMap();
+        map.putString("id", liveEventId);
+        map.putString("state", liveEventState);
+        getReactInstanceManager().getCurrentReactContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("updateLiveState", map);
+
     }
 }

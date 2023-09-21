@@ -15,6 +15,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -22,6 +23,7 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.sendbird.live.AuthenticateParams;
 import com.sendbird.live.Host;
 import com.sendbird.live.HostType;
@@ -51,6 +53,7 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
     public String cameraId;
     private LiveEvent liveEventRef;
 
+    private int listenerCount = 0;
 
     SendbirdLiveModule(ReactApplicationContext context) {
         super(context);
@@ -258,4 +261,23 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
         // Here you can add more methods to cover other functionalities like
         // `enterAsHost` and others.
     }
+
+    // Required for rn built in EventEmitter Calls.
+    @ReactMethod
+    public void addListener(String eventName) {
+        if (listenerCount == 0) {
+            // Set up any upstream listeners or background tasks as necessary
+        }
+
+        listenerCount += 1;
+    }
+
+    @ReactMethod
+    public void removeListeners(Integer count) {
+        listenerCount -= count;
+        if (listenerCount == 0) {
+            // Remove upstream listeners, stop unnecessary background tasks
+        }
+    }
+
 }

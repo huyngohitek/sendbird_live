@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // SendbirdLiveStream.tsx
 
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,11 @@ import {
   requireNativeComponent,
   FlatList,
   SafeAreaView,
+  Modal,
+  TextInput,
+  RefreshControl,
+  DeviceEventEmitter,
+  NativeEventEmitter,
 } from 'react-native';
 import {NativeModules} from 'react-native';
 import LiveEvent from './LiveEvent';
@@ -23,26 +28,115 @@ const headers = {
   'Content-Type': 'application/json',
   'Api-Token': API_TOKEN,
 };
+const LIVE_EVENT_STATE = {
+  CREATED: 'created',
+  READY: 'ready',
+  ONGOING: 'ongoing',
+  ENDED: 'ended',
+};
+
 const apiGetLiveEvents = `https://api-${APP_ID}.calls.sendbird.com/v1/live-events?limit=100&state[]=ready&state[]=ongoing&state[]=created`;
 const SendbirdLiveStream: React.FC = ({userId}) => {
   const apiGetToken = `https://api-${APP_ID}.sendbird.com/v3/users/${userId}/token`;
   const [liveEventId, setLiveEventId] = useState<string>('');
   const [liveEvents, setLiveEvents] = useState([]);
-
+  const [liveEventTitle, setLiveEventTitle] = useState('Live Sample');
+  const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const toggleModal = () => setModalVisible(!modalVisible);
+  const liveEventsRef = useRef();
+  liveEventsRef.current = liveEvents;
   const getLiveEvents = () => {
+    setLoading(true);
     return fetch(apiGetLiveEvents, {
       method: 'GET',
       headers,
     })
       .then(response => response.json())
       .then(json => {
-        setLiveEvents(json.live_events);
+        const events = json.live_events.filter(item => {
+          if (!item.user_ids_for_host.includes(userId)) {
+            return item.state !== 'created' && item.state !== 'ended';
+          } else {
+            return item.state !== 'ended';
+          }
+        });
+        // console.log('getLiveEvents', events);
+
+        setLiveEvents(events);
       })
       .catch(error => {
         console.error(error);
+      })
+      .finally(() => {
+        setLoading(false);
       });
   };
+
+  const updateLiveState = ({id, state}) => {
+    console.log('=====updateLiveState1======', id, state);
+    const eventIndex = liveEventsRef.current.findIndex(
+      event => event.live_event_id === id,
+    );
+    let updatedEvent = null;
+    switch (state) {
+      case LIVE_EVENT_STATE.READY:
+        updatedEvent = {
+          ...liveEventsRef.current[eventIndex],
+          state: LIVE_EVENT_STATE.READY,
+        };
+        break;
+      case LIVE_EVENT_STATE.ONGOING:
+        updatedEvent = {
+          ...liveEventsRef.current[eventIndex],
+          state: LIVE_EVENT_STATE.ONGOING,
+        };
+        break;
+      case LIVE_EVENT_STATE.ENDED:
+        updatedEvent = {
+          ...liveEventsRef.current[eventIndex],
+          state: LIVE_EVENT_STATE.ENDED,
+        };
+        break;
+
+      default:
+        break;
+    }
+    const newLiveEvents = [...liveEventsRef.current];
+    newLiveEvents[eventIndex] = updatedEvent;
+    console.log('=====updateLiveState2======', newLiveEvents);
+    setLiveEvents(newLiveEvents);
+  };
+
+  const updateLiveParticipantCount = ({id, participantCount}) => {
+    console.log('=====updateLiveParticipantCount1======', id, participantCount);
+    const eventIndex = liveEventsRef.current.findIndex(
+      event => event.live_event_id === id,
+    );
+
+    const updatedEvent = {
+      ...liveEventsRef.current[eventIndex],
+      participant_count: participantCount,
+    };
+    const newLiveEvents = [...liveEventsRef.current];
+    newLiveEvents[eventIndex] = updatedEvent;
+    console.log('=====updateLiveParticipantCount2======', newLiveEvents);
+    setLiveEvents(newLiveEvents);
+  };
+
   useEffect(() => {
+    const SendbirdLiveModuleEmitter = new NativeEventEmitter(
+      SendbirdLiveModule,
+    );
+    let updateLiveStateSubscription = SendbirdLiveModuleEmitter.addListener(
+      'updateLiveState',
+      updateLiveState,
+    );
+    let updateLiveParticipantCountSubscription =
+      SendbirdLiveModuleEmitter.addListener(
+        'updateLiveParticipantCount',
+        updateLiveParticipantCount,
+      );
     console.log('!!!===== useEffect triggered  ');
     const get_access_token = async () => {
       console.log('!!!======== get_access_token started    ');
@@ -90,13 +184,17 @@ const SendbirdLiveStream: React.FC = ({userId}) => {
       );
     };
     get_access_token();
+    return () => {
+      updateLiveParticipantCountSubscription.remove();
+      updateLiveStateSubscription.remove();
+    };
   }, []);
 
   const createLiveEvents = () => {
     const userIds: string[] = [userId];
     SendbirdLiveModule.createLiveEvent(
       userIds,
-      'LiveStreaming Sample 1',
+      liveEventTitle,
       'https://subiz.com.vn/blog/wp-content/uploads/2023/01/subiz-livestream-thuc-day-su-phat-trien-cua-cac-san-thuong-mai-dien-tu.jpg',
       liveEventRes => {
         console.log('!!!============ live event created   ', liveEventRes);
@@ -106,6 +204,7 @@ const SendbirdLiveStream: React.FC = ({userId}) => {
         console.log('!!!============ live event error    ', error);
       },
     );
+    toggleModal();
   };
   const startLiveEvent = () => {};
 
@@ -144,22 +243,58 @@ const SendbirdLiveStream: React.FC = ({userId}) => {
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={getLiveEvents} />
+        }
         data={liveEvents}
         extraData={liveEvents}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         {...{renderItem, keyExtractor}}
       />
-      <Pressable
-        hitSlop={20}
-        style={styles.btnStart}
-        onPress={createLiveEvents}>
+      <Pressable hitSlop={20} style={styles.btnStart} onPress={toggleModal}>
         <Text style={styles.txtBtnStart}>Create</Text>
       </Pressable>
+      <Modal
+        visible={modalVisible}
+        onRequestClose={toggleModal}
+        transparent
+        style={styles.modalContainer}>
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>Please input Live Event title!</Text>
+            {/* <View style={styles.txtLiveEventTitle}> */}
+            <TextInput
+              style={styles.inputLiveName}
+              onChangeText={setLiveEventTitle}
+            />
+            {/* </View> */}
+            <Pressable
+              style={[styles.button, styles.buttonClose2]}
+              onPress={createLiveEvents}>
+              <Text style={styles.textStyle}>Create Live Event</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  inputLiveName: {
+    width: 200,
+    color: 'white',
+    backgroundColor: 'blue',
+    borderRadius: 10,
+  },
+  modalContainer: {flex: 1, padding: 40},
+  txtLiveEventTitle: {
+    borderRadius: 30,
+    height: 60,
+    paddingVertical: 20,
+    backgroundColor: 'blue',
+    width: '100%',
+  },
   liveHostView: {...StyleSheet.absoluteFillObject},
   content: {flex: 1},
   btnStart: {
@@ -167,7 +302,7 @@ const styles = StyleSheet.create({
     minWidth: 80,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'green',
+    backgroundColor: 'rgba(50, 168, 82, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -193,6 +328,51 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   separator: {height: 5},
+
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalView: {
+    // margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 50,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  button: {
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+  },
+  buttonOpen: {
+    backgroundColor: '#F194FF',
+  },
+  buttonClose: {
+    backgroundColor: '#2196F3',
+  },
+  buttonClose2: {
+    marginTop: 20,
+    backgroundColor: '#2196F3',
+  },
+  textStyle: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: 'center',
+  },
 });
 
 export default SendbirdLiveStream;
