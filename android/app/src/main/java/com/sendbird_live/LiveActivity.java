@@ -1,7 +1,9 @@
 package com.sendbird_live;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
@@ -9,12 +11,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import com.facebook.react.ReactActivity;
@@ -24,6 +28,7 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.sendbird.live.Host;
 import com.sendbird.live.LiveEvent;
 import com.sendbird.live.LiveEventListener;
+import com.sendbird.live.LiveEventRole;
 import com.sendbird.live.LiveEventState;
 import com.sendbird.live.MediaOptions;
 import com.sendbird.live.ParticipantCountInfo;
@@ -43,19 +48,30 @@ public class LiveActivity extends ReactActivity {
     String TAG = this.getClass().getSimpleName();
     String cameraId = null;
     LiveEvent liveEventRef;
+    int CAMERA_PERMISSIONS_REQUEST = 100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_live);
+        //Keep the screen on
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSIONS_REQUEST);
+        }
         String liveEventId = getIntent().getStringExtra("LiveEventId");
-        boolean isHost = getIntent().getBooleanExtra("isHost", false);
+//        boolean isHost = getIntent().getBooleanExtra("isHost", false);
         assert liveEventId != null;
         SendbirdLive.getLiveEvent(liveEventId, (liveEvent, e) -> {
+            boolean isHost = liveEvent.getMyRole() == LiveEventRole.HOST;
             if (!isHost || liveEvent.getState().getValue() == LiveEventState.ONGOING.getValue()) {
                 findViewById(R.id.btnStartLive).setVisibility(View.INVISIBLE);
             }
+            if (!isHost) {
+                findViewById(R.id.btnFlipCamera).setVisibility(View.INVISIBLE);
+            }
+
             liveEventRef = liveEvent;
 
             liveEvent.addListener("liveEventListener", new LiveEventListener() {
@@ -91,7 +107,6 @@ public class LiveActivity extends ReactActivity {
                 public void onHostEntered(@NonNull LiveEvent liveEvent, @NonNull Host host) {
                     Toast.makeText(LiveActivity.this, "Host entered", Toast.LENGTH_LONG).show();
                     SendbirdVideoView hostView = findViewById(R.id.sendbirdVideoLiveView);
-                    hostView.setMirror(false);
                     hostView.setEnableHardwareScaler(true);
                     hostView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
                     liveEvent.setVideoViewForLiveEvent(hostView, liveEvent.getHost().getHostId());
@@ -112,7 +127,6 @@ public class LiveActivity extends ReactActivity {
 
                     Toast.makeText(LiveActivity.this, "Host started video", Toast.LENGTH_LONG).show();
                     SendbirdVideoView hostView = findViewById(R.id.sendbirdVideoLiveView);
-                    hostView.setMirror(false);
                     hostView.setEnableHardwareScaler(true);
                     hostView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
                     liveEvent.setVideoViewForLiveEvent(hostView, liveEvent.getHost().getHostId());
@@ -226,8 +240,16 @@ public class LiveActivity extends ReactActivity {
 
             });
             if (isHost) {
+                findViewById(R.id.btnFlipCamera).setOnClickListener(v -> {
+
+                    liveEvent.switchCamera(e4 -> {
+                        if (e4 != null) {
+                            Log.d(TAG, e4.getMessage());
+                            return;
+                        }
+                    });
+                });
                 SendbirdVideoView hostView = findViewById(R.id.sendbirdVideoLiveView);
-                hostView.setMirror(false);
                 hostView.setEnableHardwareScaler(true);
                 hostView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
                 String hostId = liveEvent.getHost().getHostId();
@@ -253,7 +275,6 @@ public class LiveActivity extends ReactActivity {
             } else {
                 if (liveEvent.getHost() != null) {
                     SendbirdVideoView hostView = findViewById(R.id.sendbirdVideoLiveView);
-                    hostView.setMirror(false);
                     hostView.setEnableHardwareScaler(true);
                     hostView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
                     String hostId = liveEvent.getHost().getHostId();

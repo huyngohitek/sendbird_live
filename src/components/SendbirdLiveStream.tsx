@@ -195,7 +195,7 @@ const SendbirdLiveStream: React.FC = ({userId}) => {
     SendbirdLiveModule.createLiveEvent(
       userIds,
       liveEventTitle,
-      'https://subiz.com.vn/blog/wp-content/uploads/2023/01/subiz-livestream-thuc-day-su-phat-trien-cua-cac-san-thuong-mai-dien-tu.jpg',
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCeC89uiMpGh-2KrgMh-XMlmwyeZbkFQJ8SiDHMv8jcNezQWwIShex9wfq5G37-qq9ZCg&usqp=CAU',
       liveEventRes => {
         console.log('!!!============ live event created   ', liveEventRes);
         setLiveEventId(liveEventRes);
