@@ -11,6 +11,7 @@ import android.hardware.camera2.CameraManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -30,6 +31,7 @@ import com.sendbird.live.HostType;
 import com.sendbird.live.InitParams;
 import com.sendbird.live.LiveEvent;
 import com.sendbird.live.LiveEventCreateParams;
+import com.sendbird.live.LiveEventRole;
 import com.sendbird.live.MediaOptions;
 import com.sendbird.live.SendbirdLive;
 import com.sendbird.webrtc.AudioDevice;
@@ -153,6 +155,7 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
         SendbirdLive.authenticate(params, (user, e) -> {
             if (e != null) {
                 errorCallback.invoke(e.getMessage());
+                Toast.makeText(reactContext, e.getMessage(), Toast.LENGTH_SHORT).show();
                 return;
             }
             successCallback.invoke("User " + user + " authenticated");
@@ -190,17 +193,16 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
                     return;
                 }
                 successCallback.invoke(liveEvent.getLiveEventId());
-                goToLiveScreen(liveEvent.getLiveEventId(), true);
+                goToLiveScreen(liveEvent.getLiveEventId());
 
             });
         });
     }
 
     @ReactMethod
-    public void goToLiveScreen(String liveEventId, boolean isHost) {
+    public void goToLiveScreen(String liveEventId) {
         Intent intent = new Intent(reactContext, LiveActivity.class);
         intent.putExtra("LiveEventId", liveEventId);
-        intent.putExtra("isHost", isHost);
         getCurrentActivity().startActivity(intent);
     }
 
@@ -226,8 +228,9 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void enterLiveEvent(String liveEventId, boolean isHost) {
+    public void enterLiveEvent(String liveEventId) {
         SendbirdLive.getLiveEvent(liveEventId, (liveEvent, e) -> {
+            boolean isHost = liveEvent.getMyRole() == LiveEventRole.HOST;
             Log.d(TAG, "enter live event ");
             if (isHost) {
                 CameraManager cameraManager = (CameraManager) reactContext.getSystemService(Context.CAMERA_SERVICE);
@@ -242,7 +245,7 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
                             Log.d(TAG, e1.getMessage());
                             return;
                         }
-                        goToLiveScreen(liveEventId, true);
+                        goToLiveScreen(liveEventId);
 
                     });
                 } catch (CameraAccessException ex) {
@@ -254,7 +257,7 @@ public class SendbirdLiveModule extends ReactContextBaseJavaModule {
                         Log.d(TAG, e2.getMessage());
                         return;
                     }
-                    goToLiveScreen(liveEventId, false);
+                    goToLiveScreen(liveEventId);
                 });
             }
         });

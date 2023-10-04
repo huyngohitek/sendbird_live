@@ -24,7 +24,7 @@ const LiveEvent = (props: ILiveEvent) => {
   // console.log('----Live Event ====', props.item);
   return (
     <Pressable
-      onPress={() => onLiveEventPress?.(liveEventId, isHost)}
+      onPress={() => onLiveEventPress?.(liveEventId)}
       style={styles.container}>
       <Image
         source={{

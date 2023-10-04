@@ -56,16 +56,22 @@ public class LiveActivity extends ReactActivity {
         setContentView(R.layout.activity_live);
         //Keep the screen on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        TextView txtParticipants = findViewById(R.id.idTxtParticipants);
         CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSIONS_REQUEST);
         }
         String liveEventId = getIntent().getStringExtra("LiveEventId");
-//        boolean isHost = getIntent().getBooleanExtra("isHost", false);
         assert liveEventId != null;
         SendbirdLive.getLiveEvent(liveEventId, (liveEvent, e) -> {
+
+            if (e != null) {
+                Log.e(TAG, e.getMessage());
+                Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                return;
+            }
             boolean isHost = liveEvent.getMyRole() == LiveEventRole.HOST;
-            if (!isHost || liveEvent.getState().getValue() == LiveEventState.ONGOING.getValue()) {
+            if (!isHost || liveEvent.getState().getValue().equals(LiveEventState.ONGOING.getValue())) {
                 findViewById(R.id.btnStartLive).setVisibility(View.INVISIBLE);
             }
             if (!isHost) {
@@ -174,7 +180,6 @@ public class LiveActivity extends ReactActivity {
 
                 @Override
                 public void onParticipantCountChanged(@NonNull LiveEvent liveEvent, @NonNull ParticipantCountInfo participantCountInfo) {
-                    TextView txtParticipants = findViewById(R.id.idTxtParticipants);
                     txtParticipants.setText(participantCountInfo.getParticipantCount() + " Participants");
                     updateEventParticipantsCount(liveEventId, participantCountInfo.getParticipantCount());
                 }
@@ -184,12 +189,6 @@ public class LiveActivity extends ReactActivity {
 
                 }
             });
-            TextView txtParticipants = findViewById(R.id.idTxtParticipants);
-            txtParticipants.setText(liveEvent.getParticipantCount() + " Participants");
-            if (e != null) {
-                Log.e(TAG, e.getMessage());
-                return;
-            }
             findViewById(R.id.btnEndLive).setOnClickListener(view -> {
 //                liveEvent.endEvent(e1 -> {
 //                    if (e1 != null) {
@@ -245,7 +244,6 @@ public class LiveActivity extends ReactActivity {
                     liveEvent.switchCamera(e4 -> {
                         if (e4 != null) {
                             Log.d(TAG, e4.getMessage());
-                            return;
                         }
                     });
                 });
@@ -276,6 +274,7 @@ public class LiveActivity extends ReactActivity {
                 if (liveEvent.getHost() != null) {
                     SendbirdVideoView hostView = findViewById(R.id.sendbirdVideoLiveView);
                     hostView.setEnableHardwareScaler(true);
+                    hostView.setMirror(false);
                     hostView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
                     String hostId = liveEvent.getHost().getHostId();
                     liveEvent.setVideoViewForLiveEvent(hostView, hostId);

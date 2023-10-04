@@ -228,17 +228,13 @@ const SendbirdLiveStream: React.FC = ({userId}) => {
     [],
   );
 
-  const onLiveEventPress = (liveId, isHost) => {
-    SendbirdLiveModule.enterLiveEvent(liveId, isHost);
+  const onLiveEventPress = liveId => {
+    SendbirdLiveModule.enterLiveEvent(liveId);
   };
 
   const renderItem = ({item, index}) => {
-    return (
-      <LiveEvent
-        {...{item, onLiveEventPress}}
-        isHost={userId === item.user_ids_for_host[0]}
-      />
-    );
+    const isHost = item.user_ids_for_host.includes(userId);
+    return <LiveEvent {...{item, onLiveEventPress, isHost}} />;
   };
   return (
     <SafeAreaView style={styles.container}>
