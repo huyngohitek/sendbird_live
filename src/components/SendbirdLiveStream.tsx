@@ -21,7 +21,7 @@ import LiveEvent from './LiveEvent';
 
 const {SendbirdLiveModule} = NativeModules;
 // const LiveHostView = requireNativeComponent('LiveHostView');
-const user2 = 'huyngohitek';
+const user2 = 'huyngohitek2';
 const APP_ID = '5E720D37-FB7D-41F3-924A-6246070BD1F8';
 const API_TOKEN = '366ab9eadb2dd21652a74ecc1dded699c26dc8e6';
 const headers = {
@@ -142,11 +142,12 @@ const SendbirdLiveStream: React.FC = ({userId}) => {
       console.log('!!!======== get_access_token started    ');
       const expires_at_ts = Date.now();
       const expires_at_ts_7days = expires_at_ts + 7 * 24 * 60 * 60 * 1000;
+      const expires_at_ts_700days = expires_at_ts + 700 * 24 * 60 * 60 * 1000;
       const sendBirdResponse = await fetch(apiGetToken, {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          expires_at: expires_at_ts_7days,
+          expires_at: expires_at_ts_700days,
         }),
       });
       const sendBirdResponseJson = await sendBirdResponse.json();

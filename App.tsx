@@ -13,7 +13,7 @@ import React, {useState} from 'react';
 import SendbirdLiveStream from './src/components/SendbirdLiveStream';
 import {Modal, Pressable, StyleSheet, Text, View} from 'react-native';
 
-const user2 = 'huyngohitek';
+const user2 = 'huyngohitek2';
 const user1 = '2U6BgR5PKxsyPHmiIwDvOxS2eso';
 const App: React.FC = () => {
   const [user, setUser] = useState('');
