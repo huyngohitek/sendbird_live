@@ -1,11 +1,18 @@
 package com.sendbird_live;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.widget.Toast;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 import com.facebook.react.ReactActivity;
 import com.facebook.react.ReactActivityDelegate;
 import com.facebook.react.ReactRootView;
 
 public class MainActivity extends ReactActivity {
-
+  private static final int MY_CAMERA_REQUEST_CODE = 100;
   /**
    * Returns the name of the main component registered from JavaScript. This is used to schedule
    * rendering of the component.
@@ -35,7 +42,22 @@ public class MainActivity extends ReactActivity {
       ReactRootView reactRootView = new ReactRootView(getContext());
       // If you opted-in for the New Architecture, we enable the Fabric Renderer.
       reactRootView.setIsFabric(BuildConfig.IS_NEW_ARCHITECTURE_ENABLED);
+      if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_DENIED) {
+        ActivityCompat.requestPermissions(getPlainActivity(), new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, MY_CAMERA_REQUEST_CODE);
+      }
       return reactRootView;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+      super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+      if (requestCode == MY_CAMERA_REQUEST_CODE) {
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+          Toast.makeText(getContext(), "Camera Permission Granted", Toast.LENGTH_SHORT).show();
+        } else {
+          Toast.makeText(getContext(), "Camera Permission Denied", Toast.LENGTH_SHORT).show();
+        } 
+      }
     }
 
     @Override
